@@ -148,7 +148,7 @@ fn msi_enable(range: MSIRange) {
     while !RCC.cr().read().msirdy() {}
 }
 
-pub(crate) unsafe fn init(config: Config) {
+pub unsafe fn init(config: Config) {
     // Switch to MSI to prevent problems with PLL configuration.
     if !RCC.cr().read().msion() {
         // Turn on MSI and configure it to 4MHz.
