@@ -188,9 +188,11 @@ impl RccInfo {
             StopMode::Standby => {}
             StopMode::Stop2 => unsafe {
                 REFCOUNT_STOP2 += 1;
+                trace!("STOP2 INC");
             },
             StopMode::Stop1 => unsafe {
                 REFCOUNT_STOP1 += 1;
+                trace!("STOP1 INC");
             },
         }
 
@@ -254,9 +256,11 @@ impl RccInfo {
             StopMode::Standby => {}
             StopMode::Stop2 => unsafe {
                 REFCOUNT_STOP2 -= 1;
+                trace!("STOP2 DEC");
             },
             StopMode::Stop1 => unsafe {
                 REFCOUNT_STOP1 -= 1;
+                trace!("STOP1 DEC");
             },
         }
 

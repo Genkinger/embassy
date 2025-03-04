@@ -55,11 +55,14 @@
 #![allow(static_mut_refs)]
 
 use core::arch::asm;
+use core::cell::RefCell;
 use core::marker::PhantomData;
 use core::sync::atomic::{compiler_fence, Ordering};
 
 use cortex_m::peripheral::SCB;
 use embassy_executor::*;
+use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
+use embassy_sync::blocking_mutex::Mutex;
 
 use crate::interrupt;
 use crate::time_driver::{get_driver, RtcDriver};
@@ -98,7 +101,7 @@ pub(crate) unsafe fn on_wakeup_irq() {
 }
 
 /// Configure STOP mode with RTC.
-pub fn stop_with_rtc(rtc: &'static Rtc) {
+pub fn stop_with_rtc(rtc: &'static Mutex<CriticalSectionRawMutex, RefCell<Rtc>>) {
     unsafe { EXECUTOR.as_mut().unwrap() }.stop_with_rtc(rtc)
 }
 
@@ -178,15 +181,21 @@ impl Executor {
         trace!("low power: resume");
     }
 
-    pub(self) fn stop_with_rtc(&mut self, rtc: &'static Rtc) {
+    pub(self) fn stop_with_rtc(&mut self, rtc: &'static Mutex<CriticalSectionRawMutex, RefCell<Rtc>>) {
         self.time_driver.set_rtc(rtc);
-
-        rtc.enable_wakeup_line();
+        rtc.lock(|rtc| rtc.borrow().enable_wakeup_line());
 
         trace!("low power: stop with rtc configured");
     }
 
     fn stop_mode(&self) -> Option<StopMode> {
+        unsafe {
+            trace!(
+                "STOP1: {}, STOP2: {}",
+                crate::rcc::REFCOUNT_STOP1,
+                crate::rcc::REFCOUNT_STOP2
+            )
+        }
         if unsafe { crate::rcc::REFCOUNT_STOP2 == 0 } && unsafe { crate::rcc::REFCOUNT_STOP1 == 0 } {
             Some(StopMode::Stop2)
         } else if unsafe { crate::rcc::REFCOUNT_STOP1 == 0 } {
